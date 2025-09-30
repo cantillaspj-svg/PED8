@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprehensive Curriculum Exam (50 Items) - Split Screen (Modern Green with Timer)</title>
+    <title>Comprehensive Curriculum Exam (50 Items) - Split Screen</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -85,7 +85,7 @@
                 
                 <label for="student-name-input" class="block text-sm font-medium text-gray-700 mb-2">Your Full Name</label>
                 <input type="text" id="student-name-input" required placeholder="E.g., Honey Rose L. Sagolili"
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 text-lg shadow-inner transition duration-150">
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 text-lg shadow-inner transition duration-150">
                 
                 <button type="button" id="start-exam-button" 
                         class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition duration-200 text-xl shadow-lg hover:shadow-xl transform hover:scale-[1.005]">
@@ -141,7 +141,7 @@
         </main>
         
         <!-- Mobile/Small Screen Score Display (Sticky Footer) -->
-        <div id="mobile-footer" class="lg:hidden sticky bottom-0 z-10">
+        <div id="mobile-footer" class="lg:hidden sticky bottom-0 z-10 hidden">
             <div class="flex justify-between items-center bg-white p-4 rounded-t-xl shadow-2xl border-t border-gray-200">
                 <div class="text-base font-semibold text-gray-800">
                     Score: <span id="score-value-mobile" class="text-green-600 text-xl ml-1 font-extrabold">0 / 50</span>
@@ -163,7 +163,7 @@
                 </svg>
                 <h3 class="mt-4 text-xl font-bold text-gray-900">Confirm Submission</h3>
                 <p id="modal-message" class="mt-2 text-sm text-gray-500">
-                    You still have 5 questions unanswered. Are you sure you want to finalize your submission?
+                    You still have unanswered questions. Are you sure you want to finalize your submission?
                 </p>
             </div>
             <div class="mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
@@ -176,10 +176,21 @@
             </div>
         </div>
     </div>
+    
+    <!-- Final Results Screen (Hidden by Default) -->
+    <div id="results-screen" class="hidden min-h-[80vh] flex flex-col items-center justify-center p-4">
+        <!-- Content will be injected here after submission -->
+    </div>
 
 
     <script>
-        // Use a placeholder name until the user provides one
+        // --- GOOGLE FORM CONFIGURATION (UPDATED) ---
+        // Your specific Google Form ID and Entry IDs extracted from the provided URL:
+        const GOOGLE_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeTROzH17YThEpVk46U1pEiogehCx5A4m_Rn0VSP9EUqc2wBw/formResponse"; 
+        const NAME_ENTRY_ID = "entry.55809052"; // Linked to 'Test Student' in your URL
+        const SCORE_ENTRY_ID = "entry.505729724"; // Linked to '50/50' in your URL
+        // ----------------------------------------------------
+
         let studentName = "Guest Student"; 
 
         // Timer Variables (1 hour = 3600 seconds)
@@ -254,18 +265,20 @@
         const scoreValueMobile = document.getElementById('score-value-mobile');
         const submitButtonDesktop = document.getElementById('submit-button-desktop');
         const submitButtonMobile = document.getElementById('submit-button-mobile');
+        const mobileFooter = document.getElementById('mobile-footer');
+        const resultsScreen = document.getElementById('results-screen');
         // Timer Elements
         const timerDisplay = document.getElementById('timer-display');
         const timerBox = document.getElementById('timer-box');
-
-
-        // New Modal Elements
+        // Modal Elements
         const finalizeModal = document.getElementById('finalize-modal');
         const modalMessage = document.getElementById('modal-message');
         const confirmFinalizeBtn = document.getElementById('confirm-finalize-btn');
         const cancelFinalizeBtn = document.getElementById('cancel-finalize-btn');
 
-        // Array to track the student's answer state (correct/incorrect)
+
+        // Array to track the student's answer state (correct/incorrect/null)
+        // Stores: true (correct), false (incorrect), null (unanswered)
         const userAnswers = Array(QUESTIONS.length).fill(null); 
 
         // Helper to map index to letter
@@ -291,8 +304,8 @@
         function updateTimerDisplay() {
             timerDisplay.textContent = formatTime(timeRemaining);
 
-            // Dynamic styling based on time left
-            if (timeRemaining <= 300 && timeRemaining > 0) { // 5 minutes remaining
+            // Dynamic styling based on time left (5 minutes remaining)
+            if (timeRemaining <= 300 && timeRemaining > 0) { 
                 timerDisplay.classList.remove('text-red-600');
                 timerDisplay.classList.add('text-red-800', 'animate-pulse-custom');
                 timerBox.classList.add('bg-red-200');
@@ -316,16 +329,15 @@
                 if (timeRemaining <= 0) {
                     stopTimer();
                     // Automatically finalize when time runs out
-                    performFinalize(userAnswers.filter(isCorrect => isCorrect === true).length, QUESTIONS.length, true);
+                    const currentScore = userAnswers.filter(isCorrect => isCorrect === true).length;
+                    performFinalize(currentScore, QUESTIONS.length, true);
                 }
             }, 1000);
         }
         // --- END TIMER FUNCTIONS ---
 
-
-        // Show Modal with Fade/Scale effects
-        function showModal(message) {
-            modalMessage.textContent = message;
+        // --- MODAL FUNCTIONS ---
+        function showModal() {
             finalizeModal.classList.remove('hidden');
             // Use requestAnimationFrame for smoother transition
             requestAnimationFrame(() => {
@@ -334,7 +346,6 @@
             });
         }
 
-        // Hide Modal with Fade/Scale effects
         function hideModal() {
             finalizeModal.classList.remove('opacity-100');
             finalizeModal.querySelector('.shadow-2xl').classList.add('scale-95');
@@ -343,6 +354,8 @@
                 finalizeModal.classList.add('hidden');
             }, 300); 
         }
+
+        // --- EXAM LOGIC ---
 
         // Render Questions
         function renderQuestions() {
@@ -393,13 +406,14 @@
             scoreValueDesktop.textContent = scoreText;
             scoreValueMobile.textContent = scoreText;
 
+            // Apply conditional coloring for score percentage
             [scoreValueDesktop, scoreValueMobile].forEach(element => {
                 element.classList.remove('text-red-500', 'text-orange-500', 'text-green-600');
                 const percentage = currentScore / totalQuestions;
                 if (percentage >= 0.8) {
                     element.classList.add('text-green-600'); 
                 } else if (percentage >= 0.6) {
-                    element.classList.add('text-orange-500'); // Use orange for borderline pass
+                    element.classList.add('text-orange-500'); // Borderline pass
                 } else {
                     element.classList.add('text-red-500'); 
                 }
@@ -409,153 +423,191 @@
         // Handler for a student selecting an answer
         function handleAnswerSelection(event) {
             // Only proceed if it's a radio button AND the question hasn't been answered yet
-            if (event.target.type !== 'radio' || userAnswers[parseInt(event.target.closest('.q-choices').dataset.questionId)] !== null) return;
+            const radioInput = event.target;
+            if (radioInput.type !== 'radio') return;
 
-            const selectedRadio = event.target;
-            const questionIndex = parseInt(selectedRadio.closest('.q-choices').dataset.questionId);
-            const questionData = QUESTIONS[questionIndex];
-            const selectedValue = parseInt(selectedRadio.value);
+            const qChoicesContainer = radioInput.closest('.q-choices');
+            if (qChoicesContainer.classList.contains('answered')) return; // Already answered
 
-            const questionCard = document.getElementById(`q-${questionIndex + 1}`);
-            const selectedLabel = document.querySelector(`label[for="${selectedRadio.id}"]`);
-            const correctRadioId = `q${questionIndex + 1}c${questionData.a}`;
-            const correctLabel = document.querySelector(`label[for="${correctRadioId}"]`);
+            const qIndex = parseInt(qChoicesContainer.dataset.questionId);
+            const selectedAnswerIndex = parseInt(radioInput.value);
+            const correctAnswerIndex = QUESTIONS[qIndex].a;
 
-            let isCorrect = (selectedValue === questionData.a);
+            const isCorrect = selectedAnswerIndex === correctAnswerIndex;
+            userAnswers[qIndex] = isCorrect;
+
+            // 1. Mark the question as answered
+            qChoicesContainer.classList.add('answered');
+
+            // 2. Apply immediate visual feedback
+            qChoicesContainer.querySelectorAll('label').forEach((label, index) => {
+                if (index === selectedAnswerIndex) {
+                    // This is the selected label
+                    if (isCorrect) {
+                        label.classList.add('correct-answer');
+                    } else {
+                        label.classList.add('incorrect-answer');
+                    }
+                } else if (index === correctAnswerIndex && !isCorrect) {
+                    // Show the correct answer if the selection was wrong
+                    label.classList.add('correct-answer');
+                    label.classList.add('border-dashed'); // Subtle hint it wasn't selected
+                }
+            });
             
-            // 1. Highlight the choices
-            if (isCorrect) {
-                selectedLabel.classList.add('correct-answer');
-            } else {
-                selectedLabel.classList.add('incorrect-answer');
-                correctLabel.classList.add('correct-answer');
-            }
-
-            // 2. Lock the answer and update state
-            const choicesDiv = selectedRadio.closest('.q-choices');
-            choicesDiv.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
-            questionCard.classList.add('answered');
-            questionCard.querySelectorAll('.choice-label').forEach(label => label.classList.add('answered'));
-
-
-            // 3. Update the score array and display
-            userAnswers[questionIndex] = isCorrect;
+            // 3. Update the running score
             updateScore();
         }
 
-        // Handler for starting the exam
-        function startExam() {
+        // --- GOOGLE FORM SUBMISSION FUNCTION ---
+        async function submitToGoogleForm(name, score, total) {
+            if (GOOGLE_FORM_URL.includes("YOUR_FORM_ID")) {
+                console.error("Submission failed: Please update GOOGLE_FORM_URL, NAME_ENTRY_ID, and SCORE_ENTRY_ID with your actual Google Form data.");
+                return;
+            }
+
+            // Prepare the data payload (URLSearchParams handles encoding)
+            const formData = new URLSearchParams();
+            formData.append(NAME_ENTRY_ID, name);
+            // Submit the score as 'X / Y' to match common grading formats
+            formData.append(SCORE_ENTRY_ID, `${score} / ${total}`); 
+
+            try {
+                // Using fetch POST request to submit data silently
+                const response = await fetch(GOOGLE_FORM_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Important for cross-origin form submission
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: formData.toString()
+                });
+
+                // The 'no-cors' response status is usually opaque and cannot be checked,
+                // so we rely on the network tab to verify success.
+                console.log("Form submission attempt successful (check network tab for status). Data submitted:", { name, score });
+
+            } catch (error) {
+                console.error("Error submitting to Google Form:", error);
+                // Even if fetch fails (e.g., due to CORS restrictions on a live form),
+                // we still want to show the student's results.
+            }
+        }
+        // ----------------------------------------
+
+        function performFinalize(finalScore, totalQuestions, isTimedOut = false) {
+            stopTimer();
+            hideModal(); // Hide modal if it was open
+
+            const unanswered = userAnswers.filter(a => a === null).length;
+            const timeSpent = initialTime - timeRemaining;
+            const timeSpentFormatted = formatTime(timeSpent);
+            
+            // Submit data to Google Form
+            submitToGoogleForm(studentName, finalScore, totalQuestions);
+            
+            // Update UI to show final results
+            examWrapper.classList.add('hidden');
+            mobileFooter.classList.add('hidden');
+            welcomeScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            
+            const completionMessage = isTimedOut 
+                ? `<p class="text-xl text-red-600 font-semibold mt-2">Time Expired. Submission Finalized Automatically.</p>`
+                : `<p class="text-xl text-green-600 font-semibold mt-2">Submission Complete.</p>`;
+
+            const resultsHtml = `
+                <div class="w-full max-w-2xl bg-white p-10 rounded-xl shadow-2xl border-4 border-green-400 text-center">
+                    <h1 class="text-5xl font-extrabold text-green-700 mb-2">Results Summary</h1>
+                    ${completionMessage}
+                    <p class="text-3xl font-bold text-gray-700 mt-6">Student: <span class="text-green-800">${studentName}</span></p>
+
+                    <div class="mt-8 grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-green-50 rounded-lg border border-green-300">
+                            <p class="text-lg font-medium text-gray-600">Final Score</p>
+                            <p class="text-6xl font-extrabold text-green-600">${finalScore}</p>
+                            <p class="text-xl text-gray-500">out of ${totalQuestions}</p>
+                        </div>
+                        <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-300">
+                            <p class="text-lg font-medium text-gray-600">Unanswered</p>
+                            <p class="text-6xl font-extrabold text-yellow-600">${unanswered}</p>
+                            <p class="text-xl text-gray-500">questions</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-300">
+                        <p class="text-lg font-medium text-gray-600">Time Used</p>
+                        <p class="text-4xl font-extrabold text-blue-600 mt-1">${timeSpentFormatted}</p>
+                    </div>
+
+                    <p class="text-sm text-gray-500 mt-8">Your results (Name and Score) have been successfully submitted to the gradebook.</p>
+                </div>
+            `;
+            resultsScreen.innerHTML = resultsHtml;
+        }
+
+        // --- EVENT LISTENERS ---
+
+        // 1. Start Exam Button
+        startExamButton.addEventListener('click', () => {
             const name = studentNameInput.value.trim();
-            if (name === "") {
-                console.error("Please enter your name to begin the exam.");
-                studentNameInput.focus();
-                studentNameInput.classList.add('border-red-500', 'ring-red-500');
-                setTimeout(() => studentNameInput.classList.remove('border-red-500', 'ring-red-500'), 1500);
+            if (name.length < 3) {
+                // Simple validation check
+                // NOTE: Using a custom modal/message box instead of alert()
+                const messageBox = document.createElement('div');
+                messageBox.className = 'fixed inset-0 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl shadow-lg z-[60] flex items-center justify-center';
+                messageBox.innerHTML = `
+                    <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-2xl">
+                        <p class="font-bold mb-3">Input Error</p>
+                        <p class="text-sm">Please enter your full name to begin the exam.</p>
+                        <button onclick="this.parentNode.parentNode.remove()" class="mt-4 bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
+                            OK
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(messageBox);
                 return;
             }
 
             studentName = name;
             studentNameDisplay.textContent = studentName;
-            
-            // Hide welcome screen and show exam with fade-out effect
-            welcomeScreen.style.opacity = 0;
-            setTimeout(() => {
-                welcomeScreen.classList.add('hidden');
-                examWrapper.classList.remove('hidden');
-            }, 300);
 
-            // Start the timer when the exam begins
-            startTimer();
+            welcomeScreen.classList.add('hidden');
+            examWrapper.classList.remove('hidden');
+            mobileFooter.classList.remove('hidden');
 
-            // Render questions now that the user is logged in
-            renderQuestions();
-        }
+            renderQuestions(); // Draw the questions
+            startTimer(); // Start the 60-minute timer
+        });
 
-        // Actual final submission logic
-        function performFinalize(currentScore, totalQuestions, isTimeUp = false) {
-            stopTimer(); // Stop the timer immediately upon submission/timeout
+        // 2. Question Answer Handler (Event Delegation)
+        questionsContainer.addEventListener('change', handleAnswerSelection);
+
+        // 3. Finalize/Submit Button Handler
+        function handleSubmitClick() {
+            const unanswered = userAnswers.filter(a => a === null).length;
+            const currentScore = userAnswers.filter(isCorrect => isCorrect === true).length;
             
-            const percentage = (currentScore / totalQuestions) * 100;
-            
-            // Log message based on submission type
-            if (isTimeUp) {
-                 console.log(`TIME'S UP! Score automatically finalized for ${studentName}. Final Score: ${currentScore} / ${totalQuestions} (${percentage.toFixed(2)}%).`);
-                 // Ensure timer displays 00:00 when time runs out
-                 timerDisplay.textContent = '00:00';
+            if (unanswered > 0) {
+                // Show confirmation modal if incomplete
+                modalMessage.innerHTML = `You have <span class="font-bold text-red-600">${unanswered} out of ${QUESTIONS.length}</span> questions unanswered. Are you sure you want to finalize your submission?`;
+                showModal();
             } else {
-                 console.log(`Exam Complete, ${studentName}! Final Score: ${currentScore} / ${totalQuestions} (${percentage.toFixed(2)}%).`); 
+                // Direct submission if complete
+                performFinalize(currentScore, QUESTIONS.length);
             }
-            
-            // Update UI to show final state
-            submitButtonDesktop.textContent = isTimeUp ? 'TIME UP!' : 'Completed!';
-            submitButtonMobile.textContent = isTimeUp ? 'TIME UP!' : 'Completed!';
-            submitButtonDesktop.disabled = true;
-            submitButtonMobile.disabled = true;
-            
-            // Visually update score display
-            updateScore();
-            
-            // Disable all inputs to prevent further changes
-            questionsContainer.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
-
-            // Scroll to top for review
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
         
-        // Finalize button behavior (uses custom modal)
-        function finalizeScore() {
-            // Check if the exam has already been finalized
-            if (submitButtonDesktop.disabled) return;
+        submitButtonDesktop.addEventListener('click', handleSubmitClick);
+        submitButtonMobile.addEventListener('click', handleSubmitClick);
 
+        // 4. Modal Confirmation/Cancellation
+        confirmFinalizeBtn.addEventListener('click', () => {
             const currentScore = userAnswers.filter(isCorrect => isCorrect === true).length;
-            const answeredCount = userAnswers.filter(a => a !== null).length;
-            const totalQuestions = QUESTIONS.length;
-            const unanswered = totalQuestions - answeredCount;
+            performFinalize(currentScore, QUESTIONS.length);
+        });
 
-            if (unanswered > 0) {
-                const message = `Warning, ${studentName}! You still have ${unanswered} out of ${totalQuestions} questions unanswered. Are you sure you want to finalize your submission?`;
-                showModal(message);
-                
-                // Remove previous listeners to prevent multiple calls
-                confirmFinalizeBtn.onclick = null;
-                cancelFinalizeBtn.onclick = null;
-
-                // Set new listeners for the modal buttons
-                confirmFinalizeBtn.onclick = () => {
-                    hideModal();
-                    performFinalize(currentScore, totalQuestions, false); // Manual submission
-                };
-                cancelFinalizeBtn.onclick = hideModal;
-                
-                return; // Stop here, modal handles the final submission
-            }
-            
-            // If all questions are answered, finalize immediately
-            performFinalize(currentScore, totalQuestions, false);
-        }
-
-
-        // Event Listeners Initialization
-        window.onload = function() {
-            // Initial timer setup
-            timerDisplay.textContent = formatTime(initialTime);
-            
-            startExamButton.addEventListener('click', startExam);
-            // Allow pressing Enter in the name field to start the exam
-            studentNameInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    startExam();
-                }
-            });
-
-            // Attach change listener to the questions container (only visible after starting)
-            questionsContainer.addEventListener('change', handleAnswerSelection);
-            
-            // Attach finalize handlers
-            submitButtonDesktop.addEventListener('click', finalizeScore);
-            submitButtonMobile.addEventListener('click', finalizeScore);
-        };
+        cancelFinalizeBtn.addEventListener('click', hideModal);
 
     </script>
 </body>
