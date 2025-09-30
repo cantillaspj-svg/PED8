@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Curriculum Exam (50 Items) - Split Screen (Modern Green with Timer)</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Off-white background for modern depth and contrast */
+            background-color: #eef1f5; 
+        }
+        .container {
+            max-width: 1400px;
+        }
+        .question-card {
+            /* Deeper, more noticeable shadow for elevation */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05); 
+            /* Smoother transition for better hover feel */
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .choice-label {
+            cursor: pointer;
+            padding: 16px; /* Increased padding */
+            border-radius: 12px; /* More rounded corners */
+            border: 1px solid #d1d5db; /* Lighter border */
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: flex-start; 
+            line-height: 1.4;
+        }
+        .choice-label:not(.answered):hover {
+            background-color: #f7f9fb; 
+            border-color: #34d399; /* Emerald/Mint border on hover */
+            transform: translateY(-1px); /* Subtle lift effect */
+        }
+        
+        /* Styles for correct/incorrect feedback */
+        .correct-answer {
+            background-color: #e6ffed !important; /* Lighter Minty Green */
+            border: 2px solid #059669 !important; /* Darker green border */
+            font-weight: 700;
+        }
+        .incorrect-answer {
+            background-color: #ffeaea !important; /* Light Pink/Red */
+            border: 2px solid #dc2626 !important;
+            font-weight: 700;
+        }
+        
+        /* Disable mouse events for radio buttons and labels once answered */
+        .answered input[type="radio"] {
+            pointer-events: none;
+        }
+        .answered .choice-label {
+            cursor: default;
+        }
+        /* Style for the sticky sidebar */
+        .sticky-sidebar {
+            position: sticky;
+            top: 1.5rem; /* Adjusted for better spacing */
+            align-self: flex-start;
+            z-index: 10;
+        }
+        /* Custom Keyframes for the pulsing effect on the timer */
+        @keyframes pulse-red {
+            0%, 100% { color: #b91c1c; } /* Red-700 */
+            50% { color: #f87171; } /* Red-400 */
+        }
+        .animate-pulse-custom {
+            animation: pulse-red 1s infinite;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div id="app" class="container mx-auto">
+
+        <!-- Initial Welcome/Name Input Screen -->
+        <div id="welcome-screen" class="min-h-[80vh] flex items-center justify-center">
+            <div class="w-full max-w-lg bg-white p-8 sm:p-10 rounded-xl shadow-2xl border border-green-300">
+                <h1 class="text-4xl font-extrabold text-green-700 mb-4 text-center tracking-tight">Curriculum Exam</h1>
+                <p class="text-gray-600 mb-8 text-center text-lg">You have 1 Hour (60:00) to complete this Semifinal Exam in Ped8.</p>
+                
+                <label for="student-name-input" class="block text-sm font-medium text-gray-700 mb-2">Your Full Name</label>
+                <input type="text" id="student-name-input" required placeholder="E.g., Honey Rose L. Sagolili"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500 text-lg shadow-inner transition duration-150">
+                
+                <button type="button" id="start-exam-button" 
+                        class="mt-6 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition duration-200 text-xl shadow-lg hover:shadow-xl transform hover:scale-[1.005]">
+                    Begin Test Now
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Main Content Wrapper (Split Screen on large devices) -->
+        <!-- Hidden until the student enters their name -->
+        <main id="exam-wrapper" class="hidden lg:grid lg:grid-cols-3 lg:gap-8">
+            
+            <!-- Left Column (Sticky Sidebar: Name & Score) -->
+            <div id="exam-sidebar" class="lg:col-span-1">
+                <div class="sticky-sidebar bg-white p-6 rounded-xl shadow-xl border border-gray-100">
+                    <h2 class="text-2xl font-extrabold text-green-800 mb-1">Exam Progress</h2>
+                    <p class="text-sm text-gray-500 mb-5 border-b pb-3">Real-Time Feedback Mode</p>
+
+                    <!-- NEW TIMER SECTION -->
+                    <div id="timer-box" class="mb-5 p-4 bg-red-50 rounded-xl border-2 border-red-300 text-center shadow-inner transition duration-500">
+                        <p class="text-lg font-semibold text-red-700">Time Remaining</p>
+                        <p id="timer-display" class="text-6xl font-extrabold text-red-600 mt-2 mb-1 transition duration-1000">60:00</p>
+                    </div>
+                    
+                    <div class="mb-5 p-3 bg-gray-50 rounded-lg">
+                        <p class="text-base font-medium text-gray-700">Student:</p>
+                        <p id="student-name-display" class="text-xl font-extrabold text-green-600 truncate"></p>
+                    </div>
+
+                    <div id="results-display-desktop" class="mt-4 p-5 bg-green-50 rounded-xl border-2 border-green-300">
+                        <p class="text-lg font-semibold text-green-800">Current Score:</p>
+                        <p class="text-5xl font-extrabold mt-1">
+                            <span id="score-value-desktop" class="text-green-600">0 / 50</span>
+                        </p>
+                    </div>
+
+                    <button type="button" id="submit-button-desktop" 
+                            class="mt-6 bg-green-700 hover:bg-green-800 text-white font-bold py-3 px-6 rounded-xl transition duration-200 w-full text-lg shadow-md hover:shadow-lg transform hover:scale-[1.005]">
+                        Finalize Score & Review
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column (Questions) -->
+            <div id="questions-area" class="lg:col-span-2">
+                <form id="exam-form">
+                    <div id="questions-container" class="space-y-8">
+                        <!-- Questions will be dynamically inserted here -->
+                    </div>
+                </form>
+            </div>
+        </main>
+        
+        <!-- Mobile/Small Screen Score Display (Sticky Footer) -->
+        <div id="mobile-footer" class="lg:hidden sticky bottom-0 z-10">
+            <div class="flex justify-between items-center bg-white p-4 rounded-t-xl shadow-2xl border-t border-gray-200">
+                <div class="text-base font-semibold text-gray-800">
+                    Score: <span id="score-value-mobile" class="text-green-600 text-xl ml-1 font-extrabold">0 / 50</span>
+                </div>
+                <button type="button" id="submit-button-mobile" class="bg-green-700 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-xl transition duration-150 text-base shadow-md">
+                    Finalize
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Finalize Confirmation Modal (Hidden by Default) -->
+    <div id="finalize-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 hidden flex items-center justify-center p-4 transition-opacity duration-300 opacity-0" aria-modal="true" role="dialog">
+        <div class="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="text-center">
+                <svg class="mx-auto h-12 w-12 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.398 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h3 class="mt-4 text-xl font-bold text-gray-900">Confirm Submission</h3>
+                <p id="modal-message" class="mt-2 text-sm text-gray-500">
+                    You still have 5 questions unanswered. Are you sure you want to finalize your submission?
+                </p>
+            </div>
+            <div class="mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button type="button" id="confirm-finalize-btn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:col-start-2 sm:text-sm transition duration-150 transform hover:scale-[1.02]">
+                    Yes, Finalize
+                </button>
+                <button type="button" id="cancel-finalize-btn" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:col-start-1 sm:text-sm transition duration-150">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Use a placeholder name until the user provides one
+        let studentName = "Guest Student"; 
+
+        // Timer Variables (1 hour = 3600 seconds)
+        const initialTime = 60 * 60; 
+        let timeRemaining = initialTime;
+        let timerInterval = null;
+
+        const QUESTIONS = [
+            // --- Curriculum Design and Organization (Q1-Q25) ---
+            { q: "Curriculum design and organization serve as a guide for what two main aspects of education?", c: ["Grading and evaluation", "Teaching and learning", "Planning and scheduling", "Research and development"], a: 1, topic: "Design" },
+            { q: "A well-planned curriculum helps teachers to do what?", c: ["Create assessments", "Know what to teach", "Manage student behavior", "Communicate with parents"], a: 1, topic: "Design" },
+            { q: "According to the document, by studying the approaches, types, elements, and components of curriculum design, educators can create lessons that are what?", c: ["Simple and easy", "Fun and engaging", "Meaningful", "Standardized and uniform"], a: 2, topic: "Design" },
+            { q: "Which of the following is NOT listed as a key area to study for curriculum design?", c: ["Approaches", "Types", "Elements", "Methods"], a: 3, topic: "Design" },
+            { q: "What do 'approaches in curriculum designing' refer to?", c: ["The tools used to create a curriculum", "The physical layout of a classroom", "The philosophical and theoretical perspectives guiding curriculum development", "The administrative process for approving a curriculum"], a: 2, topic: "Design" },
+            { q: "Which approach in curriculum design focuses on emphasizing academic disciplines?", c: ["Learner-centered", "Problem-centered", "Subject-centered", "Teacher-centered"], a: 2, topic: "Design" },
+            { q: "An approach that focuses on student needs is known as what?", c: ["Learner-centered", "Subject-centered", "Problem-centered", "Objective-based"], a: 0, topic: "Design" },
+            { q: "Which approach addresses real-world issues?", c: ["Subject-centered", "Learner-centered", "Problem-centered", "Teacher-led"], a: 2, topic: "Design" },
+            { q: "Which model of curriculum design focuses on clear goals first?", c: ["Taba's model", "Backward design", "Tyler's model", "Dewey's model"], a: 2, topic: "Design" },
+            { q: "Which model begins with the teacher knowing the student's needs?", c: ["Taba's model", "Tyler's model", "Backward design", "Aims-based model"], a: 0, topic: "Design" },
+            { q: "Which design process starts with the end result and works backward?", c: ["Subject-centered", "Learner-centered", "Backward design", "Problem-centered"], a: 2, topic: "Design" },
+            { q: "The document states that the approaches are the ways teachers ________ the curriculum.", c: ["Evaluate", "Plan", "Organize", "Assess"], a: 1, topic: "Design" },
+            { q: "What are 'types of curriculum design'?", c: ["The people who create the curriculum", "The models or frameworks used to structure the curriculum", "The places where the curriculum is used", "The time it takes to develop a curriculum"], a: 1, topic: "Design" },
+            { q: "Which of the following is listed as a type of curriculum design?", c: ["Teacher-led", "Skills-based", "Subject-centered", "Activity-based"], a: 2, topic: "Design" },
+            { q: "Elements of designing focus on the fundamental what?", c: ["Administrative tasks", "Building blocks or considerations when planning a curriculum", "Teacher training programs", "Technological tools"], a: 1, topic: "Design" },
+            { q: "What is the definition of 'Objectives' in the elements of designing?", c: ["The activities students do", "The topic to be taught", "The goals of the lesson", "The way to check if students learned"], a: 2, topic: "Design" },
+            { q: "According to the document, what does 'Content' refer to?", c: ["What students should learn", "The activities students do", "The topic or subject matter to be taught", "The way to check if students learned"], a: 2, topic: "Design" },
+            { q: "What are 'Learning experiences'?", c: ["The goals of the lesson", "The topics to be taught", "The activities students do to learn", "The methods used to assess learning"], a: 2, topic: "Design" },
+            { q: "'Evaluation methods' are ways to do what?", c: ["Create new lessons", "Grade the teacher's performance", "Check if students learned the lesson", "Plan the next school year"], a: 2, topic: "Design" },
+            { q: "What is a key difference between 'Elements of designing' and 'Components of curriculum design'?", c: ["The document does not specify a difference, stating they are 'similar'", "Elements are for teachers, and components are for administrators", "Elements are about planning, and components are about implementation", "Elements are the philosophical base, and components are the practical parts"], a: 0, topic: "Design" },
+            { q: "What is the first component of curriculum design listed in the document?", c: ["Content/Subject Matter", "Learning Experience", "Aims, goals, and objectives", "Evaluation"], a: 2, topic: "Design" },
+            { q: "What does 'Aims, goals, and objectives' define?", c: ["The knowledge, skills, and values to be taught", "What students should learn and be able to do", "The instructional strategies used to teach", "The methods used to assess learning outcomes"], a: 1, topic: "Design" },
+            { q: "The 'Content/Subject Matter' component includes what?", c: ["The instructional strategies", "The knowledge, skills, and values to be taught", "The learning outcomes", "The assessment tools"], a: 1, topic: "Design" },
+            { q: "'Learning Experience' is defined as the instructional strategies and activities used to do what?", c: ["Develop the curriculum", "Facilitate learning", "Evaluate the students", "Plan the lessons"], a: 1, topic: "Design" },
+            { q: "The 'Evaluation' component refers to the methods and tools used to assess what?", c: ["Teacher performance", "The school's effectiveness", "Learning outcomes and curriculum effectiveness", "Student attendance and behavior"], a: 2, topic: "Design" },
+
+            // --- Curriculum Implementation (Q26-Q50) ---
+            { q: "According to the provided document, what does 'Curriculum Implementation' primarily involve?", c: ["Designing the syllabus and course of study.", "Putting into practice the written curriculum.", "Evaluating the curriculum's effectiveness.", "Planning the curriculum with stakeholders."], a: 1, topic: "Implementation" },
+            { q: "According to Ornstein and Hunkins (1998), curriculum implementation is an interaction between the written curriculum and whom?", c: ["The students who will learn from it.", "The parents and community members.", "The administrators who approve it.", "The people in charge of delivering it."], a: 3, topic: "Implementation" },
+            { q: "How did Loucks and Lieberman (1983) define curriculum implementation?", c: ["A process of designing new syllabi.", "The interaction between the curriculum and the person who delivers it.", "The trying out of a new practice and what it looks like when used in a school system.", "The administrative process of changing a curriculum."], a: 2, topic: "Implementation" },
+            { q: "The document describes curriculum implementation as what kind of process?", c: ["A planning process.", "A change process.", "An evaluation process.", "A design process."], a: 1, topic: "Implementation" },
+            { q: "Who is known as the 'father of social psychology' and explained the process of change using a model that can be applied to curriculum implementation?", c: ["Loucks and Lieberman", "Ornstein and Hunkins", "Kurt Levin", "McNeil"], a: 2, topic: "Implementation" },
+            { q: "According to Kurt Levin's Force Field Model, which of the following is a 'Restraining Force' against curriculum change?", c: ["Administrative support", "Knowledge explosion", "Fear of the unknown", "Government intervention"], a: 2, topic: "Implementation" },
+            { q: "Which type of curriculum change involves replacing the present curriculum with a new one?", c: ["Alteration", "Restructuring", "Substitution", "Perturbation"], a: 2, topic: "Implementation" },
+            { q: "When minor changes or modifications are introduced to a current curriculum, it is categorized as which type of change?", c: ["Alteration", "Restructuring", "Perturbation", "Substitution"], a: 0, topic: "Implementation" },
+            { q: "According to the document, which of the following is a reason why people resist change?", c: ["They have too much time to engage with the change.", "They have the competencies to cope with the changes.", "They have a lack of incentives or benefits.", "They understand the changes completely."], a: 2, topic: "Implementation" },
+            { q: "Which curriculum implementation model focuses on overcoming staff resistance to change?", c: ["The Rand Change Model", "The Linkages Model", "The Leadership-Obstacle Course Model", "The Overcoming Resistance to Change (ORC) Model"], a: 3, topic: "Implementation" },
+            { q: "Which model puts emphasis on gathering data to determine the extent and nature of resistance?", c: ["The Leadership-Obstacle Course Model (LOC)", "The Organizational Model", "The Rand Change Model", "The Linkages Model"], a: 0, topic: "Implementation" },
+            { q: "The Rand Change Model assumes that the success of a new program depends on all of the following EXCEPT:", c: ["Characteristics of the proposed change.", "Competencies of the teaching and administrative staff.", "The cost of the new program.", "The support of the local community."], a: 2, topic: "Implementation" },
+            { q: "The document states that stakeholders are individuals and institutions interested in what?", c: ["Curriculum design", "Curriculum evaluation", "Curriculum implementation", "Curriculum development"], a: 2, topic: "Implementation" },
+            { q: "According to the document, who are considered to be at the center of the curriculum?", c: ["Teachers", "School leaders", "Learners", "Parents"], a: 2, topic: "Implementation" },
+            { q: "What is one of the primary roles of a teacher according to the document?", c: ["Planning and writing the curriculum.", "Procuring equipment and materials.", "Admitting new students.", "Providing support to parents."], a: 0, topic: "Implementation" },
+            { q: "The document lists which of the following as a function of the school principal as a curriculum manager?", c: ["Writing daily lesson plans.", "Selecting and recruiting new teachers.", "Acting as a resource speaker for the community.", "Teaching the core subjects."], a: 1, topic: "Implementation" },
+            { q: "What is the role of parents as stakeholders?", c: ["They are the primary curriculum designers.", "They act as supporters to the curriculum.", "They are in charge of curriculum evaluation.", "They are the main implementers in the classroom."], a: 1, topic: "Implementation" },
+            { q: "The quote 'It takes a whole village to educate a child' is attributed to whom in the document?", c: ["Kurt Levin", "Ornstein and Hunkins", "Former First Lady Hilary Clinton", "Loucks and Lieberman"], a: 2, topic: "Implementation" },
+            { q: "The community can be considered a curriculum resource and a learning environment by providing which of the following?", c: ["Books, materials, and facilities.", "Financial support for teacher salaries.", "New curriculum models.", "Administrative leadership."], a: 0, topic: "Implementation" },
+            { q: "Which government agencies are listed as stakeholders in curriculum implementation?", c: ["DepEd, TESDA, and CHED", "The Department of Health and Department of Justice.", "The national police and fire departments.", "The Department of Tourism."], a: 0, topic: "Implementation" },
+            { q: "What is one of the main functions of professional organizations in relation to the curriculum?", c: ["They are asked to contribute to curriculum review.", "They handle the day-to-day implementation in schools.", "They provide training for school administrators only.", "They are responsible for disciplining students."], a: 0, topic: "Implementation" },
+            { q: "What is the first trend listed that could affect the nature of education in the future?", c: ["The increase in the use of new information and communication technology.", "The paradigm shift from a teacher-centered to a student-centered approach.", "The broadening realization that education is not just the delivery of facts.", "The use of projected media."], a: 1, topic: "Implementation" },
+            { q: "The document states that the use of technology can broaden the delivery of education through which of the following?", c: ["Non-traditional approaches like Open Universities and lifelong learning.", "The use of only non-projected media.", "Limiting the curriculum to core subjects.", "Increasing the number of teachers in a school."], a: 0, topic: "Implementation" },
+            { q: "A multiple-media package that includes texts, audio, graphic images, animation, and video clips is called what?", c: ["A projected media", "A non-projected media", "Hypermedia", "A visual aid"], a: 2, topic: "Implementation" },
+            { q: "According to the criteria for assessing visual materials, what is the maximum number of lettering styles recommended for a static display?", c: ["No more than 1", "No more than 2", "No more than 3", "No more than 4"], a: 1, topic: "Implementation" }
+        ];
+
+        // DOM Elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const examWrapper = document.getElementById('exam-wrapper');
+        const studentNameInput = document.getElementById('student-name-input');
+        const startExamButton = document.getElementById('start-exam-button');
+        const studentNameDisplay = document.getElementById('student-name-display');
+        const questionsContainer = document.getElementById('questions-container');
+        const scoreValueDesktop = document.getElementById('score-value-desktop');
+        const scoreValueMobile = document.getElementById('score-value-mobile');
+        const submitButtonDesktop = document.getElementById('submit-button-desktop');
+        const submitButtonMobile = document.getElementById('submit-button-mobile');
+        // Timer Elements
+        const timerDisplay = document.getElementById('timer-display');
+        const timerBox = document.getElementById('timer-box');
+
+
+        // New Modal Elements
+        const finalizeModal = document.getElementById('finalize-modal');
+        const modalMessage = document.getElementById('modal-message');
+        const confirmFinalizeBtn = document.getElementById('confirm-finalize-btn');
+        const cancelFinalizeBtn = document.getElementById('cancel-finalize-btn');
+
+        // Array to track the student's answer state (correct/incorrect)
+        const userAnswers = Array(QUESTIONS.length).fill(null); 
+
+        // Helper to map index to letter
+        const indexToLetter = (index) => String.fromCharCode(65 + index);
+
+        // --- TIMER FUNCTIONS ---
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timerDisplay.classList.remove('animate-pulse-custom'); // Ensure pulse stops
+            timerDisplay.classList.remove('text-red-800'); // Reset color if manual submission
+            timerBox.classList.remove('bg-red-200'); // Reset background
+        }
+
+        function updateTimerDisplay() {
+            timerDisplay.textContent = formatTime(timeRemaining);
+
+            // Dynamic styling based on time left
+            if (timeRemaining <= 300 && timeRemaining > 0) { // 5 minutes remaining
+                timerDisplay.classList.remove('text-red-600');
+                timerDisplay.classList.add('text-red-800', 'animate-pulse-custom');
+                timerBox.classList.add('bg-red-200');
+            } else if (timeRemaining > 300) {
+                // Reset to standard look
+                timerDisplay.classList.remove('text-red-800', 'animate-pulse-custom');
+                timerDisplay.classList.add('text-red-600');
+                timerBox.classList.remove('bg-red-200');
+            }
+        }
+
+        function startTimer() {
+            stopTimer(); // Ensure any existing timer is cleared
+            timeRemaining = initialTime;
+            updateTimerDisplay(); // Initial display
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+
+                if (timeRemaining <= 0) {
+                    stopTimer();
+                    // Automatically finalize when time runs out
+                    performFinalize(userAnswers.filter(isCorrect => isCorrect === true).length, QUESTIONS.length, true);
+                }
+            }, 1000);
+        }
+        // --- END TIMER FUNCTIONS ---
+
+
+        // Show Modal with Fade/Scale effects
+        function showModal(message) {
+            modalMessage.textContent = message;
+            finalizeModal.classList.remove('hidden');
+            // Use requestAnimationFrame for smoother transition
+            requestAnimationFrame(() => {
+                finalizeModal.classList.add('opacity-100');
+                finalizeModal.querySelector('.shadow-2xl').classList.remove('scale-95');
+            });
+        }
+
+        // Hide Modal with Fade/Scale effects
+        function hideModal() {
+            finalizeModal.classList.remove('opacity-100');
+            finalizeModal.querySelector('.shadow-2xl').classList.add('scale-95');
+            // Hide after transition ends (300ms defined in CSS)
+            setTimeout(() => {
+                finalizeModal.classList.add('hidden');
+            }, 300); 
+        }
+
+        // Render Questions
+        function renderQuestions() {
+            questionsContainer.innerHTML = ''; // Clear existing content
+            QUESTIONS.forEach((qData, index) => {
+                const qNum = index + 1;
+                const questionHtml = `
+                    <div id="q-${qNum}" class="question-card bg-white p-6 rounded-xl border border-gray-100">
+                        <p class="text-xl font-semibold text-gray-800 mb-4">
+                            <span class="text-green-600 font-extrabold mr-2">${qNum}.</span> 
+                            ${qData.q} 
+                            <span class="text-sm font-normal text-gray-500 ml-2">(${qData.topic})</span>
+                        </p>
+                        <div class="space-y-3 q-choices" data-question-id="${index}">
+                            ${qData.c.map((choice, cIndex) => `
+                                <div>
+                                    <input type="radio" id="q${qNum}c${cIndex}" name="question${qNum}" value="${cIndex}" class="hidden">
+                                    <label for="q${qNum}c${cIndex}" class="choice-label">
+                                        <span class="text-gray-600 font-bold mr-3">${indexToLetter(cIndex)}.</span>
+                                        ${choice}
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                questionsContainer.insertAdjacentHTML('beforeend', questionHtml);
+
+                // Add dynamic separator for topic change (Design vs. Implementation)
+                if (qNum === 25) {
+                    questionsContainer.insertAdjacentHTML('beforeend', `
+                        <div class="text-center py-8">
+                            <h2 class="text-2xl font-extrabold text-green-700 bg-green-100 inline-block px-6 py-3 rounded-lg shadow-inner">
+                                Section 2: Curriculum Implementation (Q26-Q50)
+                            </h2>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        // Function to recalculate and update the score
+        function updateScore() {
+            const currentScore = userAnswers.filter(isCorrect => isCorrect === true).length;
+            const totalQuestions = QUESTIONS.length;
+            const scoreText = `${currentScore} / ${totalQuestions}`;
+
+            scoreValueDesktop.textContent = scoreText;
+            scoreValueMobile.textContent = scoreText;
+
+            [scoreValueDesktop, scoreValueMobile].forEach(element => {
+                element.classList.remove('text-red-500', 'text-orange-500', 'text-green-600');
+                const percentage = currentScore / totalQuestions;
+                if (percentage >= 0.8) {
+                    element.classList.add('text-green-600'); 
+                } else if (percentage >= 0.6) {
+                    element.classList.add('text-orange-500'); // Use orange for borderline pass
+                } else {
+                    element.classList.add('text-red-500'); 
+                }
+            });
+        }
+
+        // Handler for a student selecting an answer
+        function handleAnswerSelection(event) {
+            // Only proceed if it's a radio button AND the question hasn't been answered yet
+            if (event.target.type !== 'radio' || userAnswers[parseInt(event.target.closest('.q-choices').dataset.questionId)] !== null) return;
+
+            const selectedRadio = event.target;
+            const questionIndex = parseInt(selectedRadio.closest('.q-choices').dataset.questionId);
+            const questionData = QUESTIONS[questionIndex];
+            const selectedValue = parseInt(selectedRadio.value);
+
+            const questionCard = document.getElementById(`q-${questionIndex + 1}`);
+            const selectedLabel = document.querySelector(`label[for="${selectedRadio.id}"]`);
+            const correctRadioId = `q${questionIndex + 1}c${questionData.a}`;
+            const correctLabel = document.querySelector(`label[for="${correctRadioId}"]`);
+
+            let isCorrect = (selectedValue === questionData.a);
+            
+            // 1. Highlight the choices
+            if (isCorrect) {
+                selectedLabel.classList.add('correct-answer');
+            } else {
+                selectedLabel.classList.add('incorrect-answer');
+                correctLabel.classList.add('correct-answer');
+            }
+
+            // 2. Lock the answer and update state
+            const choicesDiv = selectedRadio.closest('.q-choices');
+            choicesDiv.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
+            questionCard.classList.add('answered');
+            questionCard.querySelectorAll('.choice-label').forEach(label => label.classList.add('answered'));
+
+
+            // 3. Update the score array and display
+            userAnswers[questionIndex] = isCorrect;
+            updateScore();
+        }
+
+        // Handler for starting the exam
+        function startExam() {
+            const name = studentNameInput.value.trim();
+            if (name === "") {
+                console.error("Please enter your name to begin the exam.");
+                studentNameInput.focus();
+                studentNameInput.classList.add('border-red-500', 'ring-red-500');
+                setTimeout(() => studentNameInput.classList.remove('border-red-500', 'ring-red-500'), 1500);
+                return;
+            }
+
+            studentName = name;
+            studentNameDisplay.textContent = studentName;
+            
+            // Hide welcome screen and show exam with fade-out effect
+            welcomeScreen.style.opacity = 0;
+            setTimeout(() => {
+                welcomeScreen.classList.add('hidden');
+                examWrapper.classList.remove('hidden');
+            }, 300);
+
+            // Start the timer when the exam begins
+            startTimer();
+
+            // Render questions now that the user is logged in
+            renderQuestions();
+        }
+
+        // Actual final submission logic
+        function performFinalize(currentScore, totalQuestions, isTimeUp = false) {
+            stopTimer(); // Stop the timer immediately upon submission/timeout
+            
+            const percentage = (currentScore / totalQuestions) * 100;
+            
+            // Log message based on submission type
+            if (isTimeUp) {
+                 console.log(`TIME'S UP! Score automatically finalized for ${studentName}. Final Score: ${currentScore} / ${totalQuestions} (${percentage.toFixed(2)}%).`);
+                 // Ensure timer displays 00:00 when time runs out
+                 timerDisplay.textContent = '00:00';
+            } else {
+                 console.log(`Exam Complete, ${studentName}! Final Score: ${currentScore} / ${totalQuestions} (${percentage.toFixed(2)}%).`); 
+            }
+            
+            // Update UI to show final state
+            submitButtonDesktop.textContent = isTimeUp ? 'TIME UP!' : 'Completed!';
+            submitButtonMobile.textContent = isTimeUp ? 'TIME UP!' : 'Completed!';
+            submitButtonDesktop.disabled = true;
+            submitButtonMobile.disabled = true;
+            
+            // Visually update score display
+            updateScore();
+            
+            // Disable all inputs to prevent further changes
+            questionsContainer.querySelectorAll('input[type="radio"]').forEach(radio => radio.disabled = true);
+
+            // Scroll to top for review
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        // Finalize button behavior (uses custom modal)
+        function finalizeScore() {
+            // Check if the exam has already been finalized
+            if (submitButtonDesktop.disabled) return;
+
+            const currentScore = userAnswers.filter(isCorrect => isCorrect === true).length;
+            const answeredCount = userAnswers.filter(a => a !== null).length;
+            const totalQuestions = QUESTIONS.length;
+            const unanswered = totalQuestions - answeredCount;
+
+            if (unanswered > 0) {
+                const message = `Warning, ${studentName}! You still have ${unanswered} out of ${totalQuestions} questions unanswered. Are you sure you want to finalize your submission?`;
+                showModal(message);
+                
+                // Remove previous listeners to prevent multiple calls
+                confirmFinalizeBtn.onclick = null;
+                cancelFinalizeBtn.onclick = null;
+
+                // Set new listeners for the modal buttons
+                confirmFinalizeBtn.onclick = () => {
+                    hideModal();
+                    performFinalize(currentScore, totalQuestions, false); // Manual submission
+                };
+                cancelFinalizeBtn.onclick = hideModal;
+                
+                return; // Stop here, modal handles the final submission
+            }
+            
+            // If all questions are answered, finalize immediately
+            performFinalize(currentScore, totalQuestions, false);
+        }
+
+
+        // Event Listeners Initialization
+        window.onload = function() {
+            // Initial timer setup
+            timerDisplay.textContent = formatTime(initialTime);
+            
+            startExamButton.addEventListener('click', startExam);
+            // Allow pressing Enter in the name field to start the exam
+            studentNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    startExam();
+                }
+            });
+
+            // Attach change listener to the questions container (only visible after starting)
+            questionsContainer.addEventListener('change', handleAnswerSelection);
+            
+            // Attach finalize handlers
+            submitButtonDesktop.addEventListener('click', finalizeScore);
+            submitButtonMobile.addEventListener('click', finalizeScore);
+        };
+
+    </script>
+</body>
+</html>
